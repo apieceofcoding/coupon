@@ -35,6 +35,4 @@ class Coupon(
 ) {
     fun isBookingOpen(now: LocalDateTime): Boolean =
         startsAt?.let { !now.isBefore(it) } ?: true
-
-    fun isSoldOut(): Boolean = issuedQuantity >= totalQuantity
 }

@@ -16,18 +16,36 @@ services:
       timeout: 3s
       retries: 20
 
+  redis:
+    image: redis:8.0
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   coupon-service:
     # 이미지 빌드: coupon-service/coupon 디렉토리에서 ./gradlew jibDockerBuild
     image: coupon-service:latest
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/coupon
       SPRING_DATASOURCE_USERNAME: coupon
       SPRING_DATASOURCE_PASSWORD: coupon
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8080:8080"
 
 volumes:
   mysql-data:
+  redis-data:
