@@ -30,11 +30,11 @@ class CouponService(
         return couponRepository.save(coupon)
     }
 
-    // v0: 동시성 방어 의도적 제외. v1(02-coupon-concurrency-design.md)에서 해결.
+    // SELECT ... FOR UPDATE 로 coupon 행을 락해 재고 차감과 1인 1매 검사를 직렬화한다.
     @Transactional
     fun issue(couponId: Long, userId: Long): Issuance {
-        val coupon = couponRepository.findById(couponId)
-            .orElseThrow { CouponNotFoundException() }
+        val coupon = couponRepository.findByIdForUpdate(couponId)
+            ?: throw CouponNotFoundException()
 
         val now = LocalDateTime.now()
 
