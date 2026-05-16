@@ -5,6 +5,10 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/coupon}
     username: ${SPRING_DATASOURCE_USERNAME:coupon}
     password: ${SPRING_DATASOURCE_PASSWORD:coupon}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
   jpa:
     hibernate:
       ddl-auto: update
