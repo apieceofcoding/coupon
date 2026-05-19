@@ -10,7 +10,9 @@ scripts/load/
 └── part-3/                       # 큐 디커플링
     ├── issue_burst.js            # 5000 req/s 30s, P99 측정
     ├── verify_burst.sh           # Worker 드레인 후 결과
-    └── run.sh                    # 워밍업 + 본 측정 통합 러너
+    ├── run.sh                    # 워밍업 + 본 측정 통합 러너
+    ├── kafka_lag.sh              # (3-2c) Consumer lag
+    └── kafka_dlt_peek.sh         # (3-2c) DLT 토픽 확인
 ```
 
 사전 준비: `brew install k6 jq` + `docker pull eclipse-temurin:25-jre` + `docker compose up -d`.
@@ -65,6 +67,13 @@ COUPON_ID=$COUPON_ID scripts/load/part-2/verify.sh
 dropped_iterations 도 같이 봐야 디커플링 효과가 입체적이다. 3-1 은 백엔드가 느려서 k6 VU 풀 5000 이 가득 차고 21k+ 요청이 발사조차 못 한다. 3-2a/b/c 는 백엔드가 빨라 VU 가 다음 iteration 으로 즉시 넘어가 dropped 가 0 에 수렴.
 
 `count_match` (= `coupon.issued_quantity == COUNT(*) FROM issuance`) 도 모두 OK. Worker 가 한 트랜잭션 안에서 `INSERT issuance` 와 `UPDATE coupon SET issued_quantity = issued_quantity + 1` 을 같이 처리하기 때문 (`UPDATE ... +1` 은 SQL 단에서 원자적이라 동시 갱신끼리 lost update 가 없다).
+
+### Kafka 관측 (part-3-2c)
+
+```bash
+watch -n 1 scripts/load/part-3/kafka_lag.sh   # Consumer lag 추이
+scripts/load/part-3/kafka_dlt_peek.sh         # DLT 격리 확인
+```
 
 ### JVM kill 시 손실 측정 (별도 절차)
 

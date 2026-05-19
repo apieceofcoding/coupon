@@ -3,6 +3,7 @@ package com.apiece.coupon.application
 import com.apiece.coupon.api.dto.CreateCouponRequest
 import com.apiece.coupon.domain.Coupon
 import com.apiece.coupon.domain.CouponRepository
+import com.apiece.coupon.infrastructure.messaging.IssuanceRequestProducer
 import com.apiece.coupon.infrastructure.messaging.IssuanceRequested
 import com.apiece.coupon.support.AlreadyIssuedException
 import com.apiece.coupon.support.CouponNotFoundException
@@ -13,7 +14,6 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
-import org.springframework.context.ApplicationEventPublisher
 import java.time.LocalDateTime
 import java.util.Optional
 import kotlin.test.assertEquals
@@ -24,8 +24,8 @@ class CouponServiceTest {
 
     private val couponRepository = mockk<CouponRepository>(relaxUnitFun = true)
     private val couponIssuer = mockk<CouponIssuer>(relaxUnitFun = true)
-    private val eventPublisher = mockk<ApplicationEventPublisher>(relaxUnitFun = true)
-    private val service = CouponService(couponRepository, couponIssuer, eventPublisher)
+    private val producer = mockk<IssuanceRequestProducer>(relaxUnitFun = true)
+    private val service = CouponService(couponRepository, couponIssuer, producer)
 
     @Test
     fun `행사 생성하면 Redis 재고 키 초기화`() {
@@ -39,16 +39,16 @@ class CouponServiceTest {
     }
 
     @Test
-    fun `발급 성공시 IssuanceRequested 이벤트 publish + id 없는 Issuance 반환`() {
+    fun `발급 성공시 Kafka 로 IssuanceRequested publish + id 없는 Issuance 반환`() {
         val coupon = coupon(id = 1L, totalQuantity = 10, validityDays = 7)
         val captured = slot<IssuanceRequested>()
         every { couponRepository.findById(1L) } returns Optional.of(coupon)
-        every { eventPublisher.publishEvent(capture<IssuanceRequested>(captured)) } returns Unit
+        every { producer.publish(capture(captured)) } returns Unit
 
         val result = service.issue(1L, 42L)
 
         verify { couponIssuer.tryIssue(1L, 42L) }
-        verify { eventPublisher.publishEvent(any<IssuanceRequested>()) }
+        verify { producer.publish(any()) }
         assertEquals(42L, captured.captured.userId)
         assertEquals(1L, captured.captured.couponId)
         assertEquals(42L, result.userId)
@@ -70,12 +70,12 @@ class CouponServiceTest {
     }
 
     @Test
-    fun `Issuer 가 SoldOutException 을 던지면 그대로 전파 (이벤트 publish 없음)`() {
+    fun `Issuer 가 SoldOutException 을 던지면 그대로 전파 (publish 없음)`() {
         every { couponRepository.findById(1L) } returns Optional.of(coupon(id = 1L))
         every { couponIssuer.tryIssue(1L, 42L) } throws SoldOutException()
 
         assertFailsWith<SoldOutException> { service.issue(1L, 42L) }
-        verify(exactly = 0) { eventPublisher.publishEvent(any<IssuanceRequested>()) }
+        verify(exactly = 0) { producer.publish(any()) }
     }
 
     @Test
