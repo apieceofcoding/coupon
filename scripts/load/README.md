@@ -44,3 +44,27 @@ verify.sh 가 한 표로 보여주는 컬럼:
 ## 측정 순서
 
 `part-2-1-load-test` (v0 결함 재현) → `part-2-2-pessimistic-lock` → `part-2-3-redis-lua`. 각 브랜치에서 위 실행을 반복하고 결과를 design 문서 6.3 절 표에 채움.
+
+## part-3-1-load-test: 발급 폭증 (flash event)
+
+3단원 (큐 디커플링) 의 기준 시나리오. 같은 부하 (5000 req/s, 30s) 를 2단원 vs v2a/v2b/v2c 에서 돌려 **P99 응답 시간** 과 **DB 쓰기 QPS** 가 어떻게 달라지는지 비교한다.
+
+```bash
+./scripts/load/reset.sh
+COUPON_ID=$(scripts/load/create_coupon.sh)
+k6 run -e COUPON_ID=$COUPON_ID scripts/load/flash_event.js
+COUPON_ID=$COUPON_ID scripts/load/verify_flash.sh
+```
+
+- `flash_event.js`: 5000 req/s 30초. k6 가 P99 와 상태 코드 분포를 출력. `issue_latency p(99)<500ms` 임계가 통과하는지 확인.
+- `verify_flash.sh`: Worker 가 큐를 다 비울 때까지 폴링한 뒤 (`COUNT(*)` 가 `STABLE_SECONDS` 초간 변화 없으면 확정) DB 상태 출력. 2단원 (동기) 에서는 즉시 확정, v2a/b/c 에서는 몇 초에서 수십 초 더 걸릴 수 있음.
+
+브랜치별 기대값:
+
+| 브랜치              | 발급 건수 | P99           | 비고                          |
+| ---------------- | ----- | ------------- | --------------------------- |
+| `part-2-3-redis-lua` | 5000  | DB latency 박힘 | 기준 (동기 INSERT)               |
+| `part-3-2a-...`  | 5000  | 평탄            | JVM kill 시 손실 발생 가능          |
+| `part-3-2b-...`  | 5000  | 평탄            | 본질은 2a 와 동일 (Spring wrapping) |
+| `part-3-2c-...`  | 5000  | 평탄            | Kafka 영속 → JVM kill 손실 없음    |
+
