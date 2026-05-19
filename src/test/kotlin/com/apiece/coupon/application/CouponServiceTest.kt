@@ -3,30 +3,30 @@ package com.apiece.coupon.application
 import com.apiece.coupon.api.dto.CreateCouponRequest
 import com.apiece.coupon.domain.Coupon
 import com.apiece.coupon.domain.CouponRepository
-import com.apiece.coupon.domain.Issuance
-import com.apiece.coupon.domain.IssuanceRepository
+import com.apiece.coupon.infrastructure.messaging.InMemoryIssuanceQueue
+import com.apiece.coupon.infrastructure.messaging.IssuanceRequested
 import com.apiece.coupon.support.AlreadyIssuedException
 import com.apiece.coupon.support.CouponNotFoundException
 import com.apiece.coupon.support.NotStartedException
+import com.apiece.coupon.support.QueueFullException
 import com.apiece.coupon.support.SoldOutException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Test
-import org.springframework.dao.DataIntegrityViolationException
 import java.time.LocalDateTime
 import java.util.Optional
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class CouponServiceTest {
 
     private val couponRepository = mockk<CouponRepository>(relaxUnitFun = true)
-    private val issuanceRepository = mockk<IssuanceRepository>()
     private val couponIssuer = mockk<CouponIssuer>(relaxUnitFun = true)
-    private val service = CouponService(couponRepository, issuanceRepository, couponIssuer)
+    private val issuanceQueue = mockk<InMemoryIssuanceQueue>(relaxUnitFun = true)
+    private val service = CouponService(couponRepository, couponIssuer, issuanceQueue)
 
     @Test
     fun `행사 생성하면 Redis 재고 키 초기화`() {
@@ -40,20 +40,21 @@ class CouponServiceTest {
     }
 
     @Test
-    fun `발급 성공시 issued_quantity 증가 + Issuance 저장`() {
-        val coupon = coupon(id = 1L, totalQuantity = 10, issuedQuantity = 5)
-        val captured = slot<Issuance>()
+    fun `발급 성공시 큐에 IssuanceRequested 이벤트 enqueue + id 없는 Issuance 반환`() {
+        val coupon = coupon(id = 1L, totalQuantity = 10, validityDays = 7)
+        val captured = slot<IssuanceRequested>()
         every { couponRepository.findById(1L) } returns Optional.of(coupon)
-        every { couponRepository.incrementIssuedQuantity(1L) } returns 1
-        every { issuanceRepository.save(capture(captured)) } answers { captured.captured.also { it.id = 99L } }
+        every { issuanceQueue.enqueue(capture(captured)) } returns Unit
 
         val result = service.issue(1L, 42L)
 
         verify { couponIssuer.tryIssue(1L, 42L) }
-        verify { couponRepository.incrementIssuedQuantity(1L) }
+        verify { issuanceQueue.enqueue(any()) }
+        assertEquals(42L, captured.captured.userId)
+        assertEquals(1L, captured.captured.couponId)
         assertEquals(42L, result.userId)
         assertEquals(1L, result.couponId)
-        assertNotNull(result.expiresAt)
+        assertNull(result.id) // 비동기 흐름이라 DB id 없음
     }
 
     @Test
@@ -70,10 +71,12 @@ class CouponServiceTest {
     }
 
     @Test
-    fun `Issuer 가 SoldOutException 을 던지면 그대로 전파`() {
+    fun `Issuer 가 SoldOutException 을 던지면 그대로 전파 (큐 enqueue 없음)`() {
         every { couponRepository.findById(1L) } returns Optional.of(coupon(id = 1L))
         every { couponIssuer.tryIssue(1L, 42L) } throws SoldOutException()
+
         assertFailsWith<SoldOutException> { service.issue(1L, 42L) }
+        verify(exactly = 0) { issuanceQueue.enqueue(any()) }
     }
 
     @Test
@@ -84,12 +87,10 @@ class CouponServiceTest {
     }
 
     @Test
-    fun `Issuer 가 통과해도 DB UNIQUE 가 막으면 AlreadyIssuedException`() {
+    fun `큐가 가득 차면 QueueFullException 전파`() {
         every { couponRepository.findById(1L) } returns Optional.of(coupon(id = 1L))
-        every { couponRepository.incrementIssuedQuantity(1L) } returns 1
-        every { issuanceRepository.save(any()) } throws DataIntegrityViolationException("uk_issuance_user_coupon")
-
-        assertFailsWith<AlreadyIssuedException> { service.issue(1L, 42L) }
+        every { issuanceQueue.enqueue(any()) } throws QueueFullException()
+        assertFailsWith<QueueFullException> { service.issue(1L, 42L) }
     }
 
     private fun coupon(

@@ -4,11 +4,10 @@ import com.apiece.coupon.api.dto.CreateCouponRequest
 import com.apiece.coupon.domain.Coupon
 import com.apiece.coupon.domain.CouponRepository
 import com.apiece.coupon.domain.Issuance
-import com.apiece.coupon.domain.IssuanceRepository
-import com.apiece.coupon.support.AlreadyIssuedException
+import com.apiece.coupon.infrastructure.messaging.InMemoryIssuanceQueue
+import com.apiece.coupon.infrastructure.messaging.IssuanceRequested
 import com.apiece.coupon.support.CouponNotFoundException
 import com.apiece.coupon.support.NotStartedException
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -16,8 +15,8 @@ import java.time.LocalDateTime
 @Service
 class CouponService(
     private val couponRepository: CouponRepository,
-    private val issuanceRepository: IssuanceRepository,
     private val couponIssuer: CouponIssuer,
+    private val issuanceQueue: InMemoryIssuanceQueue,
 ) {
 
     @Transactional
@@ -34,7 +33,6 @@ class CouponService(
         return coupon
     }
 
-    @Transactional
     fun issue(couponId: Long, userId: Long): Issuance {
         val coupon = couponRepository.findById(couponId)
             .orElseThrow { CouponNotFoundException() }
@@ -45,19 +43,22 @@ class CouponService(
         }
 
         couponIssuer.tryIssue(couponId, userId)
-        couponRepository.incrementIssuedQuantity(couponId)
 
-        return try {
-            issuanceRepository.save(
-                Issuance(
-                    userId = userId,
-                    couponId = couponId,
-                    issuedAt = now,
-                    expiresAt = now.plusDays(coupon.validityDays.toLong()),
-                )
+        val expiresAt = now.plusDays(coupon.validityDays.toLong())
+        issuanceQueue.enqueue(
+            IssuanceRequested(
+                couponId = couponId,
+                userId = userId,
+                issuedAt = now,
+                expiresAt = expiresAt,
             )
-        } catch (e: DataIntegrityViolationException) {
-            throw AlreadyIssuedException()
-        }
+        )
+
+        return Issuance(
+            userId = userId,
+            couponId = couponId,
+            issuedAt = now,
+            expiresAt = expiresAt,
+        )
     }
 }

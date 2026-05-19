@@ -5,7 +5,8 @@ import com.apiece.coupon.domain.IssuanceStatus
 import java.time.LocalDateTime
 
 class IssuanceResponse(
-    val id: Long,
+    // 비동기 발급 흐름에서는 DB INSERT 이전에 응답이 나가서 id 가 아직 없을 수 있다.
+    val id: Long?,
     val userId: Long,
     val couponId: Long,
     val status: IssuanceStatus,
@@ -15,7 +16,7 @@ class IssuanceResponse(
 ) {
     companion object {
         fun from(issuance: Issuance): IssuanceResponse = IssuanceResponse(
-            id = requireNotNull(issuance.id),
+            id = issuance.id,
             userId = issuance.userId,
             couponId = issuance.couponId,
             status = issuance.status,
