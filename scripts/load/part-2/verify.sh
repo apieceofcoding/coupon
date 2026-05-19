@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# 발급량과 결함 확인. 사용: COUPON_ID=1 scripts/load/verify.sh
+# 발급량과 결함 확인. 사용: COUPON_ID=1 scripts/load/part-2/verify.sh
 
 # 명령 실패 / 미정의 변수 / 파이프 중간 실패 시 즉시 종료
 set -euo pipefail
 COUPON_ID="${COUPON_ID:-1}"
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../../.."
 
 # issued_quantity  coupon.issued_quantity (카운터 필드)
 # total_quantity   재고 총량

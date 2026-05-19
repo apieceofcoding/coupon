@@ -1,31 +1,44 @@
 # 부하 테스트
 
-`part-2-1-load-test` 의 k6 시나리오. 같은 시나리오를 `part-2-2-pessimistic-lock`, `part-2-3-redis-lua` 위에서도 그대로 돌려 결과를 비교한다.
+단원별 시나리오를 폴더로 분리한다. 공유 헬퍼 (`reset.sh`, `create_coupon.sh`) 는 루트 유지.
+
+```
+scripts/load/
+├── reset.sh                  # 공유: coupon/issuance TRUNCATE
+├── create_coupon.sh          # 공유: 쿠폰 1개 생성
+├── part-2/                   # 동시성/정확성 (part-2-1 ~ 2-3)
+│   ├── over_issuance.js      # 5000 req/s 30s, 재고 초과 발급 검증
+│   ├── duplicate_issuance.js # 5000 req/s 30s, 1인 1매 검증
+│   └── verify.sh             # issued_quantity vs issuance_rows 표 출력
+└── part-3/                   # 큐 디커플링 (part-3-1 ~ 3-2c)
+    ├── flash_event.js        # 5000 req/s 30s, P99/상태분포 측정
+    └── verify_flash.sh       # Worker 드레인 폴링 후 결과 표
+```
 
 ## 사전 준비
 
 - `brew install k6 jq`
 - `docker compose up -d` 후 서비스가 8080 응답
 
-## 실행 (coupon/ 에서)
+## part-2: 동시성/정확성 검증
+
+같은 시나리오를 `part-2-1-load-test` (v0 결함 재현) → `part-2-2-pessimistic-lock` → `part-2-3-redis-lua` 위에서 그대로 돌려 결과를 비교한다.
 
 ```bash
 # 1) 과발급 검증 (재고만큼만 발급되어야 한다)
 ./scripts/load/reset.sh
 COUPON_ID=$(scripts/load/create_coupon.sh)
-k6 run -e COUPON_ID=$COUPON_ID scripts/load/over_issuance.js
-COUPON_ID=$COUPON_ID scripts/load/verify.sh
+k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-2/over_issuance.js
+COUPON_ID=$COUPON_ID scripts/load/part-2/verify.sh
 
 # 2) 중복발급 검증 (1인 1매만 쿠폰 발급되어야 한다)
 ./scripts/load/reset.sh
 COUPON_ID=$(scripts/load/create_coupon.sh)
-k6 run -e COUPON_ID=$COUPON_ID scripts/load/duplicate_issuance.js
-COUPON_ID=$COUPON_ID scripts/load/verify.sh
+k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-2/duplicate_issuance.js
+COUPON_ID=$COUPON_ID scripts/load/part-2/verify.sh
 ```
 
-## 결과 해석
-
-verify.sh 가 한 표로 보여주는 컬럼:
+### 결과 해석 (part-2/verify.sh)
 
 | 컬럼              | 의미                                            |
 | --------------- | --------------------------------------------- |
@@ -38,22 +51,18 @@ verify.sh 가 한 표로 보여주는 컬럼:
 
 `issuance` 테이블의 `UNIQUE (user_id, coupon_id)` 가 같은 사용자가 같은 쿠폰을 2번 INSERT 하는 것을 DB 단에서 차단해요. 그래서 `duplicate_users` 는 항상 0입니다.
 
-- **`over_issuance=FAIL`**: 사용자가 서로 다른 over_issuance 시나리오에서 발생. `isSoldOut()` 검사가 race 라 여러 스레드가 같은 재고를 보고 다 통과 → 재고를 넘는 INSERT.
-- **`count_match=FAIL`**: 두 시나리오 모두에서 발생. 동시 트랜잭션의 `UPDATE coupon SET issued_quantity = ?` 가 서로 덮어쓰는 lost update 로 카운터가 실제 발급 수와 어긋남.
+- **`over_issuance=FAIL`**: `isSoldOut()` 검사가 race 라 여러 스레드가 같은 재고를 보고 다 통과 → 재고를 넘는 INSERT.
+- **`count_match=FAIL`**: 동시 트랜잭션의 `UPDATE coupon SET issued_quantity = ?` 가 서로 덮어쓰는 lost update 로 카운터가 실제 발급 수와 어긋남.
 
-## 측정 순서
+## part-3: 발급 폭증 (flash event) — 큐 디커플링 측정
 
-`part-2-1-load-test` (v0 결함 재현) → `part-2-2-pessimistic-lock` → `part-2-3-redis-lua`. 각 브랜치에서 위 실행을 반복하고 결과를 design 문서 6.3 절 표에 채움.
-
-## part-3-1-load-test: 발급 폭증 (flash event)
-
-3단원 (큐 디커플링) 의 기준 시나리오. 같은 부하 (5000 req/s, 30s) 를 2단원 vs v2a/v2b/v2c 에서 돌려 **P99 응답 시간** 과 **DB 쓰기 QPS** 가 어떻게 달라지는지 비교한다.
+같은 부하 (5000 req/s, 30s) 를 2단원 vs v2a/v2b/v2c 에서 돌려 **P99 응답 시간** 과 **DB 쓰기 QPS** 가 어떻게 달라지는지 비교한다.
 
 ```bash
 ./scripts/load/reset.sh
 COUPON_ID=$(scripts/load/create_coupon.sh)
-k6 run -e COUPON_ID=$COUPON_ID scripts/load/flash_event.js
-COUPON_ID=$COUPON_ID scripts/load/verify_flash.sh
+k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-3/flash_event.js
+COUPON_ID=$COUPON_ID scripts/load/part-3/verify_flash.sh
 ```
 
 - `flash_event.js`: 5000 req/s 30초. k6 가 P99 와 상태 코드 분포를 출력. `issue_latency p(99)<500ms` 임계가 통과하는지 확인.
@@ -68,3 +77,19 @@ COUPON_ID=$COUPON_ID scripts/load/verify_flash.sh
 | `part-3-2b-...`  | 5000  | 평탄            | 본질은 2a 와 동일 (Spring wrapping) |
 | `part-3-2c-...`  | 5000  | 평탄            | Kafka 영속 → JVM kill 손실 없음    |
 
+### JVM kill 시 손실 측정 (part-3-2a / 2b / 2c)
+
+부하가 흐르는 동안 다른 셸에서 `coupon-service` 컨테이너만 강제 종료해 본다.
+
+```bash
+# 한쪽 셸:
+k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-3/flash_event.js
+
+# 다른 셸 (k6 시작 ~10초 후):
+docker compose kill -s KILL coupon-service
+# 그 후 다시 띄움
+docker compose up -d coupon-service
+```
+
+- v2a / v2b: 큐 안에 있던 이벤트가 통째로 사라짐 → `verify_flash.sh` 의 `issuance_rows` 가 k6 의 2xx 응답 수보다 적음.
+- v2c: Kafka 가 commit 안 된 offset 부터 재시작 시점에 이어서 처리 → 손실 없이 결국 `issuance_rows = 2xx 응답 수`.

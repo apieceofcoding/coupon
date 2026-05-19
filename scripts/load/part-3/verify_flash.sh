@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # flash_event 시나리오 검증. Worker 드레인을 폴링으로 기다린 뒤 결과 표 출력.
 #
-# 사용:  COUPON_ID=1 scripts/load/verify_flash.sh
+# 사용:  COUPON_ID=1 scripts/load/part-3/verify_flash.sh
 # 환경:  TIMEOUT_SECONDS (기본 60)  STABLE_SECONDS (기본 3)
 
 set -euo pipefail
 COUPON_ID="${COUPON_ID:-1}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-60}"
 STABLE_SECONDS="${STABLE_SECONDS:-3}"
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../../.."
 
 ROW_COUNT_SQL="SELECT COUNT(*) FROM issuance WHERE coupon_id = $COUPON_ID"
 row_count() {
