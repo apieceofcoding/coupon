@@ -36,11 +36,20 @@ COUPON_ID=$COUPON_ID scripts/load/part-3/verify_flash.sh
 
 `flash_event.js` 는 `p(99)<500ms` 임계를 건다. 4개 브랜치에서 같은 시나리오를 돌려 비교:
 
-| 브랜치                       | P99 임계  | JVM kill 시 손실 |
-| ------------------------- | ------- | ------------- |
-| `part-2-3-redis-lua`      | ❌ (기준)  | n/a           |
-| `part-3-2a-inmemory-queue` | ✅       | 있음            |
-| `part-3-2b-event-listener` | ✅       | 있음 (2a 와 동일)  |
-| `part-3-2c-kafka`         | ✅       | 없음 (Kafka 영속) |
+### 측정 결과 (5000 req/s × 30s, M-series Mac + Docker Desktop)
 
-JVM kill 측정: 부하 중 다른 셸에서 `docker compose kill -s KILL coupon-service && docker compose up -d coupon-service`. 손실량 = k6 의 2xx 응답 수 − `issuance_rows`.
+> 워밍업 1회 (JIT/커넥션풀/Kafka 코디네이터 디스커버리 비용 포함) 후 본 측정. 발급 5000, 2xx 5000, 409 ~145k 는 4개 브랜치 모두 동일.
+
+| 브랜치                      | P99 (워밍업) | P99 (steady) | 임계 (500ms) | 비고                              |
+| ------------------------- | --------- | ------------ | --------- | ------------------------------- |
+| `part-2-3-redis-lua`      | 4.61s     | (워밍업 무관, DB 동기)   | ❌ 기준    | 응답이 DB INSERT 끝날 때까지 매달림           |
+| `part-3-2a-inmemory-queue`| 425ms     | **3.79ms**   | ✅         | LinkedBlockingQueue 한 단계로 1000배 ↓ |
+| `part-3-2b-event-listener`| 435ms     | **3.98ms**   | ✅         | 2a 와 본질 동일, 어노테이션만 다름             |
+| `part-3-2c-kafka`         | 592ms     | **5.19ms**   | ✅         | 워밍업이 더 큼 (Kafka 컨슈머 그룹 조인)        |
+
+### JVM kill 시 손실 측정 (별도 절차)
+
+부하 중 다른 셸에서 `docker compose kill -s KILL coupon-service && docker compose up -d coupon-service`. 손실량 = k6 의 2xx 응답 수 − `issuance_rows`.
+
+- 2a / 2b: 큐 안 메시지 통째 손실 (양수)
+- 2c: Kafka 가 미커밋 offset 부터 재처리 → 손실 0
