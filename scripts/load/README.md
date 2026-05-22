@@ -54,9 +54,9 @@ COUPON_ID=$COUPON_ID scripts/load/part-2/verify.sh
 | 브랜치                       | P99 (워밍업) | P99 (steady) | dropped (steady) | count_match | 비고                                  |
 | -------------------------- | --------- | ------------ | ---------------- | ----------- | ----------------------------------- |
 | `part-3-1-load-test`       | 5.22s     | 4.27s        | 21,931           | OK          | 응답이 DB INSERT 끝날 때까지 매달림 (임계 ❌)        |
-| `part-3-2a-inmemory-queue` | 402ms     | **4.28ms**   | ~0               | OK          | LinkedBlockingQueue 한 단계로 1000배 ↓     |
-| `part-3-2b-event-listener` | 448ms     | **8.81ms**   | ~0               | OK          | 2a 와 본질 동일, 어노테이션만 다름                |
-| `part-3-2c-kafka`          | 489ms     | **10.75ms**  | ~0               | OK          | 워밍업이 가장 큼 (Kafka 컨슈머 그룹 조인 + 메타 페치)  |
+| `part-3-2a-inmemory-queue` | 368ms     | **3.92ms**   | ~0               | OK          | LinkedBlockingQueue 한 단계로 1000배 ↓     |
+| `part-3-2b-event-listener` | 358ms     | **4.65ms**   | ~0               | OK          | 2a 와 본질 동일, 어노테이션만 다름                |
+| `part-3-2c-kafka`          | 454ms     | **5.04ms**   | ~0               | OK          | 워밍업이 가장 큼 (Kafka 컨슈머 그룹 조인 + 메타 페치)  |
 
 3-2a/b/c 는 steady 에서 모두 임계 (500ms) 통과. 워밍업은 백엔드가 빠를수록 첫 30초의 일회성 비용 (JIT, 풀, 컨슈머 조인) 이 응답에 두드러진다.
 
