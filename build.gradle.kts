@@ -58,7 +58,12 @@ tasks.withType<Test> {
 
 jib {
 	from {
-		image = "eclipse-temurin:25-jre"
+		// docker:// 는 jib 가 로컬 docker daemon 의 이미지를 가져오게 한다. registry
+		// 접근이 없으니 docker-credential-helper 가 hub credential 을 찾다가 띄우는
+		// 4 줄짜리 noise 가 사라진다. @sha256:... digest 명시는 reproducibility 보장
+		// 과 동시에 "image digest 없음" warning 도 제거.
+		// 사전 준비 (학생이 한 번만): `docker pull eclipse-temurin:25-jre`.
+		image = "docker://eclipse-temurin:25-jre@sha256:04262e8782d6b034ee5d7c1c5d4e8938fcf2063a76b4bfcd84e5d994d09c27bc"
 		platforms {
 			platform {
 				architecture = "arm64"

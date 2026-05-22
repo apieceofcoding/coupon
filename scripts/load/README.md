@@ -13,7 +13,9 @@ scripts/load/
     └── run.sh                    # 워밍업 + 본 측정 통합 러너
 ```
 
-사전 준비: `brew install k6 jq` + `docker compose up -d`.
+사전 준비: `brew install k6 jq` + `docker pull eclipse-temurin:25-jre` + `docker compose up -d`.
+
+> `docker pull` 은 한 번만. Jib 가 base image 를 로컬 docker daemon 에서 가져오게 설정돼 있어 hub credential helper noise 와 digest reproducibility 경고가 같이 사라진다.
 
 ### 브랜치 전환 시 (이미지 재생성)
 
