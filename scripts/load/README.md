@@ -15,6 +15,18 @@ scripts/load/
 
 사전 준비: `brew install k6 jq` + `docker compose up -d`.
 
+### 브랜치 전환 시 (이미지 재생성)
+
+브랜치마다 서비스 코드가 다르므로, 전환 후에는 **이미지를 새로 굽고 `coupon-service` 컨테이너만 교체**한다. mysql/redis/kafka 는 그대로 둔다.
+
+```bash
+git checkout <branch>
+./gradlew jibDockerBuild                                # coupon-service:latest 재생성 (Jib)
+docker compose up -d --force-recreate coupon-service    # 새 이미지로 컨테이너만 교체
+```
+
+이걸 빼먹으면 이전 브랜치의 코드가 그대로 돌아 측정값이 헷갈린다. 재시작 후 `docker compose logs -f coupon-service` 로 `Started CouponServiceApplication` 한 줄 뜨는 것까지 확인하고 부하 시나리오를 돌리자.
+
 ## part-2
 
 ```bash
