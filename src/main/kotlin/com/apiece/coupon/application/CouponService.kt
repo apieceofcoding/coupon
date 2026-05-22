@@ -8,6 +8,7 @@ import com.apiece.coupon.infrastructure.messaging.IssuanceRequestProducer
 import com.apiece.coupon.infrastructure.messaging.IssuanceRequested
 import com.apiece.coupon.support.CouponNotFoundException
 import com.apiece.coupon.support.NotStartedException
+import com.apiece.coupon.support.SoldOutException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -17,6 +18,7 @@ class CouponService(
     private val couponRepository: CouponRepository,
     private val couponIssuer: CouponIssuer,
     private val issuanceRequestProducer: IssuanceRequestProducer,
+    private val soldOutSignal: SoldOutSignal,
 ) {
 
     @Transactional
@@ -34,6 +36,13 @@ class CouponService(
     }
 
     fun issue(couponId: Long, userId: Long): Issuance {
+        // 매진 후의 트래픽은 fast-path 에서 곧장 거절. Lua 까지 안 들어간다.
+        // false negative 가 나도 (Caffeine TTL 1초 동안) Lua 가 -1 로 최종 거절하므로
+        // 정확성은 안 깨진다.
+        if (soldOutSignal.isSoldOut(couponId)) {
+            throw SoldOutException()
+        }
+
         val coupon = couponRepository.findById(couponId)
             .orElseThrow { CouponNotFoundException() }
 

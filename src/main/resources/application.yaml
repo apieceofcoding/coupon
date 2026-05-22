@@ -49,6 +49,12 @@ coupon:
     fresh-ms: ${COUPON_CACHE_FRESH_MS:500}
     # DB latency 시뮬레이션 (테스트용). loader 안에서 Thread.sleep. 0=비활성.
     simulated-load-latency-ms: ${COUPON_CACHE_SIMULATED_LOAD_LATENCY_MS:0}
+  sold-out:
+    # 매진 플래그의 Redis TTL. 이벤트 종료까지 살아 있어야 하므로 충분히 길게.
+    ttl-seconds: ${COUPON_SOLD_OUT_TTL_SECONDS:86400}
+    # Application fast-path (Caffeine) TTL. 1 초가 표준. Redis EXISTS 호출이
+    # 인스턴스 당 초당 1 회로 떨어진다. 매진 직후 1 초까지 false negative 허용.
+    fast-path-ttl-ms: ${COUPON_SOLD_OUT_FAST_PATH_TTL_MS:1000}
 
 logging:
   level:
