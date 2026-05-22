@@ -31,11 +31,6 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.springframework.kafka:spring-kafka")
-	// spring-kafka 4.0.5 의 JsonSerializer/JsonDeserializer 가 아직 Jackson 2.x API 에 의존.
-	// Spring Boot 4 는 Jackson 3 를 쓰므로, Kafka 직렬화 호환을 위해 Jackson 2 모듈을 따로 끌어옴.
-	implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
-	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
-	implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.2")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("tools.jackson.module:jackson-module-kotlin")
 	implementation("io.github.oshai:kotlin-logging-jvm:7.0.7")
