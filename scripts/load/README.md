@@ -51,16 +51,18 @@ COUPON_ID=$COUPON_ID scripts/load/part-2/verify.sh
 
 > 발급 5000, 2xx 5000, 409 ~145k 는 4개 브랜치 모두 동일. 측정은 매 브랜치마다 `git checkout` + `./gradlew jibDockerBuild` + `docker compose up -d --force-recreate coupon-service` 후 `run.sh` 한 번 실행.
 
-| 브랜치                       | P99 (워밍업) | P99 (steady) | dropped (steady) | 임계 (500ms) | 비고                                  |
-| -------------------------- | --------- | ------------ | ---------------- | --------- | ----------------------------------- |
-| `part-3-1-load-test`       | 5.22s     | 4.27s        | 21,931           | ❌ 기준    | 응답이 DB INSERT 끝날 때까지 매달림              |
-| `part-3-2a-inmemory-queue` | 362ms     | **5.33ms**   | ~0               | ✅         | LinkedBlockingQueue 한 단계로 800배 ↓     |
-| `part-3-2b-event-listener` | 429ms     | **4.39ms**   | ~0               | ✅         | 2a 와 본질 동일, 어노테이션만 다름                |
-| `part-3-2c-kafka`          | 535ms     | **8.00ms**   | ~0               | ✅         | 워밍업이 가장 큼 (Kafka 컨슈머 그룹 조인 + 메타 페치)  |
+| 브랜치                       | P99 (워밍업) | P99 (steady) | dropped (steady) | count_match | 비고                                  |
+| -------------------------- | --------- | ------------ | ---------------- | ----------- | ----------------------------------- |
+| `part-3-1-load-test`       | 5.22s     | 4.27s        | 21,931           | OK          | 응답이 DB INSERT 끝날 때까지 매달림 (임계 ❌)        |
+| `part-3-2a-inmemory-queue` | 402ms     | **4.28ms**   | ~0               | OK          | LinkedBlockingQueue 한 단계로 1000배 ↓     |
+| `part-3-2b-event-listener` | 448ms     | **8.81ms**   | ~0               | OK          | 2a 와 본질 동일, 어노테이션만 다름                |
+| `part-3-2c-kafka`          | 489ms     | **10.75ms**  | ~0               | OK          | 워밍업이 가장 큼 (Kafka 컨슈머 그룹 조인 + 메타 페치)  |
+
+3-2a/b/c 는 steady 에서 모두 임계 (500ms) 통과. 워밍업은 백엔드가 빠를수록 첫 30초의 일회성 비용 (JIT, 풀, 컨슈머 조인) 이 응답에 두드러진다.
 
 dropped_iterations 도 같이 봐야 디커플링 효과가 입체적이다. 3-1 은 백엔드가 느려서 k6 VU 풀 5000 이 가득 차고 21k+ 요청이 발사조차 못 한다. 3-2a/b/c 는 백엔드가 빨라 VU 가 다음 iteration 으로 즉시 넘어가 dropped 가 0 에 수렴.
 
-**알려진 정확성 차이**: 3-2a/b/c 는 `verify_burst.sh` 가 `count_match=FAIL` 을 띄운다. 이유는 발급 흐름을 큐로 떼어내면서 `coupon.issued_quantity` 컬럼 갱신을 Worker 가 안 하기 때문 (Worker 는 `issuance` row 만 INSERT). `issuance_rows=5000` 은 정확하므로 실제 발급은 정확하고, 카운터 컬럼이 빠진 것뿐. Worker 의 책임에 카운터 증가를 넣을지, `issued_quantity` 컬럼을 폐기하고 `COUNT(*)` 로 대체할지는 도메인 결정이다.
+`count_match` (= `coupon.issued_quantity == COUNT(*) FROM issuance`) 도 모두 OK. Worker 가 한 트랜잭션 안에서 `INSERT issuance` 와 `UPDATE coupon SET issued_quantity = issued_quantity + 1` 을 같이 처리하기 때문 (`UPDATE ... +1` 은 SQL 단에서 원자적이라 동시 갱신끼리 lost update 가 없다).
 
 ### JVM kill 시 손실 측정 (별도 절차)
 
