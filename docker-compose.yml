@@ -73,8 +73,9 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       # stampede 데모 기본값 1초. 셸에서 COUPON_CACHE_TTL_MS=10000 으로 오버라이드 가능.
       COUPON_CACHE_TTL_MS: ${COUPON_CACHE_TTL_MS:-1000}
-      # DB latency 시뮬레이션. 4-1a/4-1b 는 0 (실측). 4-1c 에서 30 으로 오버라이드해 SWR 효과 가시화.
-      COUPON_CACHE_SIMULATED_LOAD_LATENCY_MS: ${COUPON_CACHE_SIMULATED_LOAD_LATENCY_MS:-0}
+      # SWR 효과 가시화를 위해 4-1c 에서 DB latency 30ms 시뮬레이션. 0=비활성.
+      COUPON_CACHE_SIMULATED_LOAD_LATENCY_MS: ${COUPON_CACHE_SIMULATED_LOAD_LATENCY_MS:-30}
+      COUPON_CACHE_FRESH_MS: ${COUPON_CACHE_FRESH_MS:-500}
     ports:
       - "8080:8080"
 

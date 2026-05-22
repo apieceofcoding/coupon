@@ -45,6 +45,8 @@ coupon:
   cache:
     # 쿠폰 캐시 TTL. stampede 측정 시 1000 (1초) 으로 오버라이드.
     ttl-ms: ${COUPON_CACHE_TTL_MS:10000}
+    # SWR fresh 윈도우 (ttl-ms 보다 짧게). 이 안: 즉시 반환, 넘으면 stale + 백그라운드 갱신.
+    fresh-ms: ${COUPON_CACHE_FRESH_MS:500}
     # DB latency 시뮬레이션 (테스트용). loader 안에서 Thread.sleep. 0=비활성.
     simulated-load-latency-ms: ${COUPON_CACHE_SIMULATED_LOAD_LATENCY_MS:0}
 
