@@ -8,8 +8,8 @@ scripts/load/
 │   ├── duplicate_issuance.js     # 5000 req/s 30s, 1인 1매
 │   └── verify.sh                 # issued_quantity vs issuance_rows
 └── part-3/                       # 큐 디커플링
-    ├── flash_event.js            # 5000 req/s 30s, P99 측정
-    └── verify_flash.sh           # Worker 드레인 후 결과
+    ├── issue_burst.js            # 5000 req/s 30s, P99 측정
+    └── verify_burst.sh           # Worker 드레인 후 결과
 ```
 
 사전 준비: `brew install k6 jq` + `docker compose up -d`.
@@ -30,15 +30,17 @@ COUPON_ID=$COUPON_ID scripts/load/part-2/verify.sh
 ```bash
 ./scripts/load/reset.sh
 COUPON_ID=$(scripts/load/create_coupon.sh)
-k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-3/flash_event.js
-COUPON_ID=$COUPON_ID scripts/load/part-3/verify_flash.sh
+k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-3/issue_burst.js
+COUPON_ID=$COUPON_ID scripts/load/part-3/verify_burst.sh
 ```
 
-`flash_event.js` 는 `p(99)<500ms` 임계를 건다. 4개 브랜치에서 같은 시나리오를 돌려 비교:
+`issue_burst.js` 는 `p(99)<500ms` 임계를 건다. 4개 브랜치에서 같은 시나리오를 돌려 비교:
 
 ### 측정 결과 (5000 req/s × 30s, M-series Mac + Docker Desktop)
 
 > 워밍업 1회 (JIT/커넥션풀/Kafka 코디네이터 디스커버리 비용 포함) 후 본 측정. 발급 5000, 2xx 5000, 409 ~145k 는 4개 브랜치 모두 동일.
+
+**워밍업 절차**: 위 part-3 명령 블록을 두 번 돌린다. 서비스 프로세스는 띄운 채로 두고, 회차 사이에 `reset.sh` 로 DB/Redis 만 비운다. JVM JIT, HikariCP 풀, Kafka 컨슈머 그룹/메타데이터, Lettuce 커넥션은 살아남아 2회차가 steady-state 값이 된다. 2-3 (동기) 만 예외로 두 회차가 같은데, 병목이 JIT/풀이 아니라 DB INSERT 자체라 워밍업이 의미 없기 때문이다.
 
 | 브랜치                      | P99 (워밍업) | P99 (steady) | 임계 (500ms) | 비고                              |
 | ------------------------- | --------- | ------------ | --------- | ------------------------------- |

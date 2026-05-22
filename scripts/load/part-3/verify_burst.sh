@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# flash_event 시나리오 검증. Worker 드레인을 폴링으로 기다린 뒤 결과 표 출력.
+# issue_burst 시나리오 검증. Worker 드레인을 폴링으로 기다린 뒤 결과 표 출력.
 #
-# 사용:  COUPON_ID=1 scripts/load/part-3/verify_flash.sh
+# 사용:  COUPON_ID=1 scripts/load/part-3/verify_burst.sh
 # 환경:  TIMEOUT_SECONDS (기본 60)  STABLE_SECONDS (기본 3)
 
 set -euo pipefail
