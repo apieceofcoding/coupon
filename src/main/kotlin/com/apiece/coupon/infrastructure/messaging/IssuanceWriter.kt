@@ -1,37 +1,24 @@
 package com.apiece.coupon.infrastructure.messaging
 
-import com.apiece.coupon.domain.CouponRepository
-import com.apiece.coupon.domain.Issuance
-import com.apiece.coupon.domain.IssuanceRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 
 private val log = KotlinLogging.logger {}
 
+// 트랜잭션 경계 (IssuanceTransactionalWriter) 의 호출자. catch 가 트랜잭션 밖에 있어야
+// Spring 이 자동 rollback 한 뒤 UnexpectedRollbackException 없이 멱등 처리할 수 있다.
 @Component
 class IssuanceWriter(
-    private val issuanceRepository: IssuanceRepository,
-    private val couponRepository: CouponRepository,
+    private val transactional: IssuanceTransactionalWriter,
 ) {
-    // 한 트랜잭션 안에서 issuance INSERT + coupon.issued_quantity UPDATE 를 같이 처리.
-    // UPDATE 의 "+1" 은 SQL 단에서 원자적이라 동시 갱신끼리 lost update 가 없다.
-    // INSERT 가 UNIQUE 위반이면 saveAndFlush 가 즉시 throw → catch → UPDATE 도 실행 안 됨 →
-    // 트랜잭션은 rollback 되어 카운터/행 둘 다 변하지 않으니 원자적 멱등 처리.
-    @Transactional
     fun write(event: IssuanceRequested) {
         try {
-            issuanceRepository.saveAndFlush(
-                Issuance(
-                    userId = event.userId,
-                    couponId = event.couponId,
-                    issuedAt = event.issuedAt,
-                    expiresAt = event.expiresAt,
-                )
-            )
-            couponRepository.incrementIssuedQuantity(event.couponId)
+            transactional.insertAndIncrement(event)
         } catch (e: DataIntegrityViolationException) {
+            // INSERT 의 UNIQUE 위반: 같은 (couponId, userId) 가 이미 발급됨.
+            // 트랜잭션은 이미 rollback 됐으므로 카운터/행 모두 변하지 않은 상태이며,
+            // 우리는 그대로 무시해 at-least-once 의 중복 메시지를 흡수한다.
             log.debug { "UNIQUE 위반은 멱등 처리: couponId=${event.couponId}, userId=${event.userId}" }
         }
     }
