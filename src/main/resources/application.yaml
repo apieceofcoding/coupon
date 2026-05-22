@@ -41,6 +41,12 @@ spring:
     listener:
       ack-mode: record
 
+coupon:
+  cache:
+    # 쿠폰 캐시 TTL. 평소엔 10s. 부하 테스트에서 stampede 를 강제로 만들 때는
+    # 1000 (1초) 으로 오버라이드해서 TTL 만료 주기를 빠르게 만든다.
+    ttl-ms: ${COUPON_CACHE_TTL_MS:10000}
+
 logging:
   level:
     # 같은 이유로 부하 측정용 로그 레벨. 디버깅 시 DEBUG/TRACE 로 일시 상향.

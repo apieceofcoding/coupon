@@ -71,6 +71,9 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # 쿠폰 캐시 TTL. 부하 테스트에서 stampede 를 보려면 1000 (1초) 으로 낮춘다.
+      # 평소엔 application.yaml 의 기본값 10000 (10초) 을 사용.
+      COUPON_CACHE_TTL_MS: ${COUPON_CACHE_TTL_MS:-10000}
     ports:
       - "8080:8080"
 
