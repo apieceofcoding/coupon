@@ -1,17 +1,18 @@
 package com.apiece.coupon.infrastructure.messaging
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import kotlin.concurrent.thread
+
+private val log = KotlinLogging.logger {}
 
 @Component
 class InMemoryIssuanceWorker(
     private val queue: InMemoryIssuanceQueue,
     private val writer: IssuanceWriter,
 ) {
-    private val log = LoggerFactory.getLogger(javaClass)
     private lateinit var workerThread: Thread
 
     @PostConstruct
@@ -27,10 +28,10 @@ class InMemoryIssuanceWorker(
                 try {
                     writer.write(event)
                 } catch (e: Exception) {
-                    log.error("Worker write 실패: couponId={}, userId={}", event.couponId, event.userId, e)
+                    log.error(e) { "Worker write 실패: couponId=${event.couponId}, userId=${event.userId}" }
                 }
             }
-            log.info("issuance-worker 종료")
+            log.info { "issuance-worker 종료" }
         }
     }
 

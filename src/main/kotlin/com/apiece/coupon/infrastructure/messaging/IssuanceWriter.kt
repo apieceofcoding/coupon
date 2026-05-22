@@ -2,16 +2,16 @@ package com.apiece.coupon.infrastructure.messaging
 
 import com.apiece.coupon.domain.Issuance
 import com.apiece.coupon.domain.IssuanceRepository
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
+
+private val log = KotlinLogging.logger {}
 
 @Component
 class IssuanceWriter(
     private val issuanceRepository: IssuanceRepository,
 ) {
-    private val log = LoggerFactory.getLogger(javaClass)
-
     fun write(event: IssuanceRequested) {
         try {
             issuanceRepository.save(
@@ -23,7 +23,7 @@ class IssuanceWriter(
                 )
             )
         } catch (e: DataIntegrityViolationException) {
-            log.debug("UNIQUE 위반은 멱등 처리: couponId={}, userId={}", event.couponId, event.userId)
+            log.debug { "UNIQUE 위반은 멱등 처리: couponId=${event.couponId}, userId=${event.userId}" }
         }
     }
 }
