@@ -34,8 +34,6 @@ k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-3/issue_burst.js
 COUPON_ID=$COUPON_ID scripts/load/part-3/verify_burst.sh
 ```
 
-`issue_burst.js` 는 `p(99)<500ms` 임계를 건다. 4개 브랜치에서 같은 시나리오를 돌려 비교:
-
 ### 측정 결과 (5000 req/s × 30s, M-series Mac + Docker Desktop)
 
 > 워밍업 1회 (JIT/커넥션풀/Kafka 코디네이터 디스커버리 비용 포함) 후 본 측정. 발급 5000, 2xx 5000, 409 ~145k 는 4개 브랜치 모두 동일.
