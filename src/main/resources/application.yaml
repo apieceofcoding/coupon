@@ -27,6 +27,9 @@ spring:
       acks: "1"
     consumer:
       group-id: issuance-worker
+      # 부하 테스트/로컬 편의용. 운영에서는 "latest" 또는 "none" 으로 바꿀 것.
+      # (현재 KafkaConfig 가 ConsumerFactory 를 직접 만들기 때문에 이 값은 사실상
+      # 미사용이지만, 의도를 yaml 에도 남겨둔다.)
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       # ErrorHandlingDeserializer 로 감싸야 깨진 payload 가 DLT 로 정상 격리된다.

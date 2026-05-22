@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.config.TopicBuilder
 
+// KafkaAdmin.autoCreate=false 로 두었기 때문에 이 NewTopic 빈들은 부팅 시 자동
+// 적용되지 않는다. 토픽의 기대 스펙(파티션 수, 복제 수)을 코드에 박아두는 문서
+// 역할이며, 실제 생성/변경은 admin 스크립트나 IaC 로 수행한다.
 @Configuration
 class KafkaTopicConfig {
 
@@ -12,8 +15,6 @@ class KafkaTopicConfig {
     fun issuanceRequestedTopic(): NewTopic =
         TopicBuilder.name(IssuanceTopics.REQUESTED).partitions(3).replicas(1).build()
 
-    // DLT 도 명시적으로 선언 (DeadLetterPublishingRecoverer 가 자동 생성도 하지만
-    // 운영 환경에서는 토픽 정책을 명시하는 편이 안전).
     @Bean
     fun issuanceRequestedDltTopic(): NewTopic =
         TopicBuilder.name(IssuanceTopics.REQUESTED_DLT).partitions(3).replicas(1).build()

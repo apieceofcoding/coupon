@@ -38,9 +38,15 @@ class KafkaConfig(
         .registerModule(JavaTimeModule())
         .registerModule(KotlinModule.Builder().build())
 
+    // 토픽 자동 생성/파티션 증감은 운영 사고로 직결되므로 KafkaAdmin 의 부팅 시
+    // 자동 적용을 끈다. NewTopic 빈은 스펙 문서로만 남고, 실제 토픽 생성/변경은
+    // 운영자가 admin 도구나 IaC 로 수동 수행한다.
     @Bean
-    fun kafkaAdmin(): KafkaAdmin =
-        KafkaAdmin(mapOf(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers))
+    fun kafkaAdmin(): KafkaAdmin {
+        val admin = KafkaAdmin(mapOf(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers))
+        admin.setAutoCreate(false)
+        return admin
+    }
 
     @Bean
     fun producerFactory(): ProducerFactory<String, Any> {
@@ -60,6 +66,8 @@ class KafkaConfig(
         val props = mapOf<String, Any>(
             ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
             ConsumerConfig.GROUP_ID_CONFIG to IssuanceTopics.CONSUMER_GROUP,
+            // "earliest" 는 부하 테스트/로컬 편의용. 운영에서는 "latest" 또는 "none" 으로 바꿔야
+            // group.id 오타나 장기 다운 후 재기동 시 전체 메시지 리플레이 사고를 막을 수 있다.
             ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
         )
         val jsonDelegate = JsonDeserializer(IssuanceRequested::class.java, objectMapper).apply {
