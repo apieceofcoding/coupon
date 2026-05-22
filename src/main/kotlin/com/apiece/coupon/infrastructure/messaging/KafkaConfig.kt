@@ -8,9 +8,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.annotation.EnableKafka
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.KotlinModule
+import tools.jackson.databind.json.JsonMapper
+import org.springframework.kafka.support.JacksonMapperUtils
 import org.apache.kafka.clients.admin.AdminClientConfig
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory
 import org.springframework.kafka.core.ConsumerFactory
@@ -21,8 +20,8 @@ import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.core.ProducerFactory
 import org.springframework.kafka.listener.DefaultErrorHandler
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-import org.springframework.kafka.support.serializer.JsonDeserializer
-import org.springframework.kafka.support.serializer.JsonSerializer
+import org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+import org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
 // Spring Boot 4 부터 KafkaAutoConfiguration 이 빠져서 ProducerFactory / ConsumerFactory /
 // KafkaTemplate / Listener Container Factory 를 직접 선언한다.
@@ -32,11 +31,10 @@ class KafkaConfig(
     @Value("\${spring.kafka.bootstrap-servers}") private val bootstrapServers: String,
 ) {
 
-    // JavaTimeModule (LocalDateTime) + KotlinModule (val 생성자) 가 등록된 ObjectMapper.
-    // spring-kafka 의 기본 ObjectMapper 는 모듈 자동 검색을 하지 않아서 직접 주입한다.
-    private val objectMapper: ObjectMapper = ObjectMapper()
-        .registerModule(JavaTimeModule())
-        .registerModule(KotlinModule.Builder().build())
+    // Spring Kafka 4 권장: JacksonMapperUtils.enhancedJsonMapper() 가 Kafka 용으로
+    // 튜닝된 JsonMapper. Jackson 3 의 ServiceLoader 가 classpath 의 KotlinModule,
+    // JavaTimeModule 등을 자동 등록해서 별도 registerModule 호출이 필요 없다.
+    private val jsonMapper: JsonMapper = JacksonMapperUtils.enhancedJsonMapper()
 
     // 토픽 자동 생성/파티션 증감은 운영 사고로 직결되므로 KafkaAdmin 의 부팅 시
     // 자동 적용을 끈다. NewTopic 빈은 스펙 문서로만 남고, 실제 토픽 생성/변경은
@@ -54,7 +52,7 @@ class KafkaConfig(
             ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
             ProducerConfig.ACKS_CONFIG to "1",
         )
-        return DefaultKafkaProducerFactory(props, StringSerializer(), JsonSerializer<Any>(objectMapper))
+        return DefaultKafkaProducerFactory(props, StringSerializer(), JacksonJsonSerializer<Any>(jsonMapper))
     }
 
     @Bean
@@ -70,7 +68,7 @@ class KafkaConfig(
             // group.id 오타나 장기 다운 후 재기동 시 전체 메시지 리플레이 사고를 막을 수 있다.
             ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
         )
-        val jsonDelegate = JsonDeserializer(IssuanceRequested::class.java, objectMapper).apply {
+        val jsonDelegate = JacksonJsonDeserializer(IssuanceRequested::class.java, jsonMapper).apply {
             addTrustedPackages("com.apiece.coupon.infrastructure.messaging")
         }
         // ErrorHandlingDeserializer 로 감싸야 깨진 payload 가 DLT 로 정상 격리된다.
