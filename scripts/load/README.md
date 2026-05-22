@@ -9,7 +9,8 @@ scripts/load/
 │   └── verify.sh                 # issued_quantity vs issuance_rows
 └── part-3/                       # 큐 디커플링
     ├── issue_burst.js            # 5000 req/s 30s, P99 측정
-    └── verify_burst.sh           # Worker 드레인 후 결과
+    ├── verify_burst.sh           # Worker 드레인 후 결과
+    └── run.sh                    # 워밍업 + 본 측정 통합 러너
 ```
 
 사전 준비: `brew install k6 jq` + `docker compose up -d`.
@@ -28,17 +29,15 @@ COUPON_ID=$COUPON_ID scripts/load/part-2/verify.sh
 ## part-3
 
 ```bash
-./scripts/load/reset.sh
-COUPON_ID=$(scripts/load/create_coupon.sh)
-k6 run -e COUPON_ID=$COUPON_ID scripts/load/part-3/issue_burst.js
-COUPON_ID=$COUPON_ID scripts/load/part-3/verify_burst.sh
+./scripts/load/part-3/run.sh           # 워밍업 1회 + 본 측정 1회 (기본)
+./scripts/load/part-3/run.sh --once    # 한 회차만
 ```
+
+`run.sh` 는 `reset → create_coupon → k6 → verify_burst` 를 한 번에 묶고, 기본으로 두 회차를 도는 워밍업 절차까지 자동화한다. 서비스 프로세스는 띄운 채로 두고, 회차 사이에 `reset.sh` 로 DB/Redis 만 비우므로 JVM JIT, HikariCP 풀, Lettuce/Kafka 컨슈머 상태는 살아남아 2회차가 steady-state 값이 된다. 2-3 (동기) 만 예외로 두 회차가 같은데, 병목이 JIT/풀이 아니라 DB INSERT 자체라 워밍업이 의미 없기 때문이다.
 
 ### 측정 결과 (5000 req/s × 30s, M-series Mac + Docker Desktop)
 
-> 워밍업 1회 (JIT/커넥션풀/Kafka 코디네이터 디스커버리 비용 포함) 후 본 측정. 발급 5000, 2xx 5000, 409 ~145k 는 4개 브랜치 모두 동일.
-
-**워밍업 절차**: 위 part-3 명령 블록을 두 번 돌린다. 서비스 프로세스는 띄운 채로 두고, 회차 사이에 `reset.sh` 로 DB/Redis 만 비운다. JVM JIT, HikariCP 풀, Kafka 컨슈머 그룹/메타데이터, Lettuce 커넥션은 살아남아 2회차가 steady-state 값이 된다. 2-3 (동기) 만 예외로 두 회차가 같은데, 병목이 JIT/풀이 아니라 DB INSERT 자체라 워밍업이 의미 없기 때문이다.
+> 발급 5000, 2xx 5000, 409 ~145k 는 4개 브랜치 모두 동일.
 
 | 브랜치                      | P99 (워밍업) | P99 (steady) | 임계 (500ms) | 비고                              |
 | ------------------------- | --------- | ------------ | --------- | ------------------------------- |
