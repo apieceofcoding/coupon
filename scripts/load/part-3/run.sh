@@ -21,7 +21,9 @@ run_once() {
   ./scripts/load/reset.sh
   local coupon_id
   coupon_id=$(./scripts/load/create_coupon.sh)
-  k6 run -e COUPON_ID="$coupon_id" scripts/load/part-3/issue_burst.js
+  # k6 가 threshold (p(99)<500) 깨지면 exit 99 를 반환한다. 2단원/3-1 같은 동기
+  # 브랜치는 워밍업이 FAIL 인 게 정상이므로, 측정값은 그대로 받고 다음 단계로 진행.
+  k6 run -e COUPON_ID="$coupon_id" scripts/load/part-3/issue_burst.js || true
   COUPON_ID="$coupon_id" ./scripts/load/part-3/verify_burst.sh
 }
 
