@@ -13,3 +13,8 @@ docker compose exec -T -e MYSQL_PWD=coupon mysql mysql -ucoupon -t coupon -e "
   SELECT (SELECT COUNT(*) FROM coupon)   AS coupon_rows,
          (SELECT COUNT(*) FROM issuance) AS issuance_rows;
 "
+
+# Redis 의 coupon stock 카운터, 발급자 set 도 비워야 회차 사이 잔존 상태가
+# 다음 측정에 섞이지 않는다. 부하 테스트용 redis 라 FLUSHDB 가 안전하고 간단.
+printf '\n\033[1;36m===== redis 데이터 리셋 (FLUSHDB) =====\033[0m\n'
+docker compose exec -T redis redis-cli FLUSHDB
