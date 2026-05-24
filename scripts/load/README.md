@@ -90,8 +90,6 @@ scripts/load/part-3/kafka_dlt_peek.sh         # DLT 격리 확인
 
 ## part-4
 
-이 브랜치 (part-4-0) 는 캐시 코드 자체가 없는 베이스라인 측정용이라 TTL 설정도 없다. 4-1a 부터의 데모 브랜치는 `docker-compose.yml` 에 메타 캐시 TTL 기본값이 1초로 박혀 있어, stampede 측정용 환경변수를 따로 줄 필요 없이 그냥 `docker compose up -d --force-recreate coupon-service` 만 하면 된다.
-
 ```bash
 ./scripts/load/part-4/run.sh           # 두 시나리오 모두 (워밍업 + 본 측정)
 ./scripts/load/part-4/run.sh meta      # ① 메타 조회 폭증만 (500 req/s × 60s)
