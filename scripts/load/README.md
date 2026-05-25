@@ -14,11 +14,11 @@ scripts/load/
 │   ├── kafka_lag.sh              # (3-2c) Consumer lag
 │   └── kafka_dlt_peek.sh         # (3-2c) DLT 토픽 확인
 └── part-4/                       # 캐시 + 매진 시그널
-    ├── meta_burst.js             # 500 req/s 60s GET 메타
+    ├── coupon_burst.js           # 500 req/s 60s GET 쿠폰 조회
     ├── post_sellout_refresh.js   # 매진 후 4000 req/s 60s 발급 폭주
     ├── create_small_coupon.sh    # 재고 100 쿠폰
     ├── sell_out.sh               # 100명 발급으로 매진
-    └── run.sh                    # meta | sellout | all
+    └── run.sh                    # coupon | sellout | all
 ```
 
 사전 준비: `brew install k6 jq` + `docker pull eclipse-temurin:25-jre` + `docker compose up -d`.
@@ -92,18 +92,18 @@ scripts/load/part-3/kafka_dlt_peek.sh         # DLT 격리 확인
 
 ```bash
 ./scripts/load/part-4/run.sh           # 두 시나리오 모두 (워밍업 + 본 측정)
-./scripts/load/part-4/run.sh meta      # ① 메타 조회 폭증만 (500 req/s × 60s)
+./scripts/load/part-4/run.sh coupon    # ① 쿠폰 조회 폭증만 (500 req/s × 60s)
 ./scripts/load/part-4/run.sh sellout   # ② 매진 후 새로고침만 (4000 req/s × 60s)
-./scripts/load/part-4/run.sh --once meta   # 워밍업 생략
+./scripts/load/part-4/run.sh --once coupon   # 워밍업 생략
 ```
 
 `run.sh` 는 시나리오 직전 `/metrics/cache/reset` 으로 카운터를 0 으로 맞추고, 시나리오 끝나면 `/metrics/cache` (GET) 로 단계별 결과 카운터를 출력한다. k6 의 latency 분포와 함께 보면 캐시 단계별 효과가 한눈에 비교된다.
 
 | 단계                        | 측정 핵심                                          |
 | ------------------------- | ---------------------------------------------- |
-| `part-4-0-load-test`      | 베이스라인. 메타 GET 30,001 회 모두 DB 직격, 매진 후 240,001 회 모두 Lua 도달 |
-| `part-4-1a-cache-naive`   | metaDbReads 152 (4-0 대비 99.5% ↓), max=91ms (stampede 흔적) |
-| `part-4-1b-single-flight` | metaDbReads 60 (TTL 윈도우 당 정확히 1회)              |
+| `part-4-0-load-test`      | 베이스라인. 쿠폰 GET 30,001 회 모두 DB 직격, 매진 후 240,001 회 모두 Lua 도달 |
+| `part-4-1a-cache-naive`   | couponDbReads 152 (4-0 대비 99.5% ↓), max=91ms (stampede 흔적) |
+| `part-4-1b-single-flight` | couponDbReads 60 (TTL 윈도우 당 정확히 1회)              |
 | `part-4-1c-swr`           | 사용자 응답 30,001 건 100% 캐시 hit, DB 부담은 백그라운드      |
 | `part-4-2-sold-out-signal` | soldOutFastPathHits 239,936 / Redis EXISTS 60 (4000 배 ↓) |
 

@@ -11,17 +11,17 @@ import java.util.concurrent.atomic.AtomicLong
 // 베이스에서 단계별 효과를 보는 것이라 이걸로 충분하다.
 @Component
 class CacheMetrics {
-    private val metaDbReads = AtomicLong()
-    private val metaCacheHits = AtomicLong()
+    private val couponDbReads = AtomicLong()
+    private val couponCacheHits = AtomicLong()
     private val soldOutRedisExists = AtomicLong()
     private val soldOutFastPathHits = AtomicLong()
 
-    fun incrementMetaDbRead() {
-        metaDbReads.incrementAndGet()
+    fun incrementCouponDbRead() {
+        couponDbReads.incrementAndGet()
     }
 
-    fun incrementMetaCacheHit() {
-        metaCacheHits.incrementAndGet()
+    fun incrementCouponCacheHit() {
+        couponCacheHits.incrementAndGet()
     }
 
     fun incrementSoldOutRedisExists() {
@@ -33,23 +33,23 @@ class CacheMetrics {
     }
 
     fun snapshot(): CacheMetricsSnapshot = CacheMetricsSnapshot(
-        metaDbReads = metaDbReads.get(),
-        metaCacheHits = metaCacheHits.get(),
+        couponDbReads = couponDbReads.get(),
+        couponCacheHits = couponCacheHits.get(),
         soldOutRedisExists = soldOutRedisExists.get(),
         soldOutFastPathHits = soldOutFastPathHits.get(),
     )
 
     fun reset() {
-        metaDbReads.set(0)
-        metaCacheHits.set(0)
+        couponDbReads.set(0)
+        couponCacheHits.set(0)
         soldOutRedisExists.set(0)
         soldOutFastPathHits.set(0)
     }
 }
 
 class CacheMetricsSnapshot(
-    val metaDbReads: Long,
-    val metaCacheHits: Long,
+    val couponDbReads: Long,
+    val couponCacheHits: Long,
     val soldOutRedisExists: Long,
     val soldOutFastPathHits: Long,
 )

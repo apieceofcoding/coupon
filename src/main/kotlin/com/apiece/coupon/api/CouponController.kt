@@ -1,6 +1,5 @@
 package com.apiece.coupon.api
 
-import com.apiece.coupon.api.dto.CouponMetaResponse
 import com.apiece.coupon.api.dto.CouponResponse
 import com.apiece.coupon.api.dto.CreateCouponRequest
 import com.apiece.coupon.api.dto.IssuanceResponse
@@ -29,11 +28,11 @@ class CouponController(
         return ResponseEntity.status(HttpStatus.CREATED).body(CouponResponse.from(coupon))
     }
 
-    // 이벤트 페이지 진입 시 호출되는 메타 조회. 모든 사용자가 같은 행을 본다.
+    // 이벤트 페이지 진입 시 호출되는 쿠폰 조회. 모든 사용자가 같은 행을 본다.
     // 4단원에서 캐시 단계가 들어가는 자리. 현재 (4-0) 는 매번 DB 직격이다.
     @GetMapping("/{couponId}")
-    fun findMeta(@PathVariable couponId: Long): CouponMetaResponse =
-        couponQueryService.findMeta(couponId)
+    fun get(@PathVariable couponId: Long): CouponResponse =
+        couponQueryService.get(couponId)
 
     @PostMapping("/{couponId}/issue")
     fun issue(
