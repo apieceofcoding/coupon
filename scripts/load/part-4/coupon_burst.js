@@ -1,6 +1,6 @@
 // 시나리오 ①: 쿠폰 조회 폭증. 캐시 stampede 와 단계별 해소를 보기 위한 측정.
 //
-// GET /api/coupons/{id} 를 동시 500 명이 60초간 호출. 캐시 TTL 은 환경변수
+// GET /api/coupons/{id} 를 동시 500 명이 30초간 호출. 캐시 TTL 은 환경변수
 // COUPON_CACHE_TTL_MS=1000 으로 1초 강제. TTL 만료 직후 마다 동시 요청이 같은
 // 키로 떠도는 모습을 단계별 (4-0 ~ 4-1c) 로 비교.
 //
@@ -21,7 +21,7 @@ export const options = {
   scenarios: {
     coupon_burst: {
       executor: 'constant-arrival-rate',
-      rate: 500, timeUnit: '1s', duration: '60s',  // 500 req/s × 60s = 30,000 회
+      rate: 500, timeUnit: '1s', duration: '30s',  // 500 req/s × 30s = 15,000 회
       preAllocatedVUs: 500, maxVUs: 1000,
     },
   },

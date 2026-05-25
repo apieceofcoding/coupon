@@ -1,7 +1,7 @@
 // 시나리오 ②: 매진 후 새로고침 폭주. 매진 시그널 효과 측정.
 //
 // 사전 조건: 재고를 100 장으로 만든 쿠폰을 만든 뒤 100 명이 발급해 매진시킨다.
-// 그 다음 60 초 동안 4,000 req/s 의 발급 폭주를 보낸다.
+// 그 다음 30 초 동안 4,000 req/s 의 발급 폭주를 보낸다.
 //
 // 측정 포인트:
 //   - 4-0 ~ 4-1c (시그널 없음): 모든 요청이 Lua 까지 들어와 -1 (매진) 응답.
@@ -22,7 +22,7 @@ export const options = {
   scenarios: {
     post_sellout: {
       executor: 'constant-arrival-rate',
-      rate: 4000, timeUnit: '1s', duration: '60s',  // 4,000 req/s × 60s = 240,000 회
+      rate: 4000, timeUnit: '1s', duration: '30s',  // 4,000 req/s × 30s = 120,000 회
       preAllocatedVUs: 2000, maxVUs: 5000,
     },
   },

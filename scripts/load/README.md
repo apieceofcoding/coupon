@@ -14,8 +14,8 @@ scripts/load/
 │   ├── kafka_lag.sh              # (3-2c) Consumer lag
 │   └── kafka_dlt_peek.sh         # (3-2c) DLT 토픽 확인
 └── part-4/                       # 캐시 + 매진 시그널
-    ├── coupon_burst.js           # 500 req/s 60s GET 쿠폰 조회
-    ├── post_sellout_refresh.js   # 매진 후 4000 req/s 60s 발급 폭주
+    ├── coupon_burst.js           # 500 req/s 30s GET 쿠폰 조회
+    ├── post_sellout_refresh.js   # 매진 후 4000 req/s 30s 발급 폭주
     ├── create_small_coupon.sh    # 재고 100 쿠폰
     ├── sell_out.sh               # 100명 발급으로 매진
     └── run.sh                    # coupon | sellout | all
@@ -92,8 +92,8 @@ scripts/load/part-3/kafka_dlt_peek.sh         # DLT 격리 확인
 
 ```bash
 ./scripts/load/part-4/run.sh           # 두 시나리오 모두 (워밍업 + 본 측정)
-./scripts/load/part-4/run.sh coupon    # ① 쿠폰 조회 폭증만 (500 req/s × 60s)
-./scripts/load/part-4/run.sh sellout   # ② 매진 후 새로고침만 (4000 req/s × 60s)
+./scripts/load/part-4/run.sh coupon    # ① 쿠폰 조회 폭증만 (500 req/s × 30s)
+./scripts/load/part-4/run.sh sellout   # ② 매진 후 새로고침만 (4000 req/s × 30s)
 ./scripts/load/part-4/run.sh --once coupon   # 워밍업 생략
 ```
 
