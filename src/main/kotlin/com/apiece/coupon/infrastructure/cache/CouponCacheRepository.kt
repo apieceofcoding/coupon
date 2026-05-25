@@ -2,9 +2,7 @@ package com.apiece.coupon.infrastructure.cache
 
 import com.apiece.coupon.api.dto.CouponResponse
 import com.apiece.coupon.application.CacheMetrics
-import org.springframework.core.io.ClassPathResource
 import org.springframework.data.redis.core.StringRedisTemplate
-import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.stereotype.Repository
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
@@ -18,10 +16,7 @@ class CouponCacheRepository(
     private val cacheMetrics: CacheMetrics,
 ) {
 
-    private val singleFlightScript: RedisScript<List<*>> = RedisScript.of(
-        ClassPathResource("lua/cache-single-flight.lua"),
-        List::class.java,
-    )
+    private val singleFlightScript = listLuaScript("lua/cache-single-flight.lua")
 
     fun getOrLoad(id: Long, loader: () -> CouponResponse): CouponResponse {
         val cacheKey = "coupon:$id"
@@ -29,12 +24,11 @@ class CouponCacheRepository(
         val fallbackKey = "coupon:$id:fallback"
         val token = UUID.randomUUID().toString()
         repeat(MAX_RETRIES) {
-            @Suppress("UNCHECKED_CAST")
-            val result = redis.execute(
+            val result = redis.runForStrings(
                 singleFlightScript,
                 listOf(cacheKey, lockKey, fallbackKey),
-                token, LOCK_TTL_MS.toString(),
-            ) as List<String>
+                token, LOCK_TTL_MS,
+            )
 
             when (result[0]) {
                 "HIT", "WAIT_FALLBACK" -> {
