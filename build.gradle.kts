@@ -34,8 +34,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("tools.jackson.module:jackson-module-kotlin")
 	implementation("io.github.oshai:kotlin-logging-jvm:7.0.7")
-	// 4-2 매진 시그널의 Application fast-path 용. JVM 안에 1 초 TTL in-process 캐시를 두어
-	// Redis EXISTS 호출도 인스턴스 당 초당 1회로 줄인다.
+	// SoldOutSignal 의 in-process fast-path 캐시.
 	implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 	runtimeOnly("com.mysql:mysql-connector-j")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")

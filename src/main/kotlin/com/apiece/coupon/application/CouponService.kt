@@ -36,9 +36,6 @@ class CouponService(
     }
 
     fun issue(couponId: Long, userId: Long): Issuance {
-        // 매진 후의 트래픽은 fast-path 에서 곧장 거절. Lua 까지 안 들어간다.
-        // false negative 가 나도 (Caffeine TTL 1초 동안) Lua 가 -1 로 최종 거절하므로
-        // 정확성은 안 깨진다.
         if (soldOutSignal.isSoldOut(couponId)) {
             throw SoldOutException()
         }
