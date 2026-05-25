@@ -101,10 +101,10 @@ scripts/load/part-3/kafka_dlt_peek.sh         # DLT 격리 확인
 
 | 단계                        | 측정 핵심                                          |
 | ------------------------- | ---------------------------------------------- |
-| `part-4-0-load-test`      | 베이스라인. 쿠폰 GET 30,001 회 모두 DB 직격, 매진 후 240,001 회 모두 Lua 도달 |
-| `part-4-1a-cache-naive`   | couponDbReads 152 (4-0 대비 99.5% ↓), max=91ms (stampede 흔적) |
-| `part-4-1b-single-flight` | couponDbReads 60 (TTL 윈도우 당 정확히 1회)              |
-| `part-4-1c-swr`           | 사용자 응답 30,001 건 100% 캐시 hit, DB 부담은 백그라운드      |
-| `part-4-2-sold-out-signal` | soldOutFastPathHits 239,936 / Redis EXISTS 60 (4000 배 ↓) |
+| `part-4-0-load-test`      | 베이스라인. 쿠폰 GET 15,000 회 모두 DB 직격, 매진 후 120,000 회 모두 Lua 도달 |
+| `part-4-1a-cache-naive`   | couponDbReads 76 (4-0 대비 99.5% ↓), max=91ms (stampede 흔적) |
+| `part-4-1b-single-flight` | couponDbReads 30 (TTL 윈도우 당 정확히 1회)              |
+| `part-4-1c-swr`           | 사용자 응답 15,000 건 100% 캐시 hit, DB 부담은 백그라운드      |
+| `part-4-2-sold-out-signal` | soldOutFastPathHits 119,968 / Redis EXISTS 30 (4000 배 ↓) |
 
 자세한 시나리오 정의와 결과 해석은 [4단원 design](../../../../materials/domain/04-coupon-cache-and-signal-design.md) 6.3 결과 표.
