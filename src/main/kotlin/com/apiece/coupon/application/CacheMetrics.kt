@@ -3,12 +3,7 @@ package com.apiece.coupon.application
 import org.springframework.stereotype.Component
 import java.util.concurrent.atomic.AtomicLong
 
-// 부하 테스트 측정용 카운터. 캐시 단계별 비교 (DB 도달 횟수, Redis EXISTS 호출 등) 를 위해
-// 단계마다 늘려두고 /metrics/cache 엔드포인트로 한 번에 읽는다.
-//
-// 단순함을 위해 application 단위 in-process AtomicLong 사용. 멀티 인스턴스에서 합산하려면
-// 외부 메트릭 시스템 (Prometheus) 으로 넘기는 게 정석이지만, 4단원 부하 측정은 단일 인스턴스
-// 베이스에서 단계별 효과를 보는 것이라 이걸로 충분하다.
+// 부하 측정용. 단일 인스턴스 비교라 Prometheus 대신 AtomicLong 으로 간단히.
 @Component
 class CacheMetrics {
     private val couponDbReads = AtomicLong()

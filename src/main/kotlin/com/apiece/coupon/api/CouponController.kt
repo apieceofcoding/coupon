@@ -28,8 +28,6 @@ class CouponController(
         return ResponseEntity.status(HttpStatus.CREATED).body(CouponResponse.from(coupon))
     }
 
-    // 이벤트 페이지 진입 시 호출되는 쿠폰 조회. 모든 사용자가 같은 행을 본다.
-    // 4단원에서 캐시 단계가 들어가는 자리. 현재 (4-0) 는 매번 DB 직격이다.
     @GetMapping("/{couponId}")
     fun get(@PathVariable couponId: Long): CouponResponse =
         couponQueryService.get(couponId)

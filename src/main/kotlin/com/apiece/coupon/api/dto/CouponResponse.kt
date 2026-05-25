@@ -3,9 +3,7 @@ package com.apiece.coupon.api.dto
 import com.apiece.coupon.domain.Coupon
 import java.time.LocalDateTime
 
-// 캐시 대상이 되는 정적 필드 (이벤트 동안 거의 안 바뀜).
-// 실시간 잔여 재고는 Redis `coupon:{id}:stock` 으로 별도 조회.
-// 영구 발급량은 DB `coupon.issued_quantity` (집계/정산용) 에서.
+// 캐시할 정적 필드만. 실시간 재고는 Redis stock, 발급량은 DB 에서 직접.
 class CouponResponse(
     val id: Long,
     val name: String,
