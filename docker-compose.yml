@@ -71,8 +71,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # 쿠폰 캐시 TTL. 이 브랜치는 stampede 측정 데모용이라 기본값 1000 (1초) 로 둔다.
-      # 더 길게 돌리고 싶으면 셸에서 COUPON_CACHE_TTL_MS=10000 으로 오버라이드.
+      # stampede 데모 기본값 1초. 셸에서 COUPON_CACHE_TTL_MS=10000 으로 오버라이드 가능.
       COUPON_CACHE_TTL_MS: ${COUPON_CACHE_TTL_MS:-1000}
     ports:
       - "8080:8080"

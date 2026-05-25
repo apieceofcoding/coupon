@@ -43,8 +43,7 @@ spring:
 
 coupon:
   cache:
-    # 쿠폰 캐시 TTL. 평소엔 10s. 부하 테스트에서 stampede 를 강제로 만들 때는
-    # 1000 (1초) 으로 오버라이드해서 TTL 만료 주기를 빠르게 만든다.
+    # 쿠폰 캐시 TTL. stampede 측정 시 1000 (1초) 으로 오버라이드.
     ttl-ms: ${COUPON_CACHE_TTL_MS:10000}
 
 logging:
