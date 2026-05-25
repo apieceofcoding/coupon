@@ -26,29 +26,32 @@ class CouponCacheRepository(
     fun getOrLoad(id: Long, loader: () -> CouponResponse): CouponResponse {
         val cacheKey = "coupon:$id"
         val lockKey = "coupon:$id:lock"
+        val fallbackKey = "coupon:$id:fallback"
         val token = UUID.randomUUID().toString()
         repeat(MAX_RETRIES) {
             @Suppress("UNCHECKED_CAST")
             val result = redis.execute(
                 singleFlightScript,
-                listOf(cacheKey, lockKey),
-                token,
-                LOCK_TTL_MS.toString(),
+                listOf(cacheKey, lockKey, fallbackKey),
+                token, LOCK_TTL_MS.toString(),
             ) as List<String>
 
             when (result[0]) {
-                "HIT" -> {
+                "HIT", "WAIT_FALLBACK" -> {
                     cacheMetrics.incrementCouponCacheHit()
                     return mapper.readValue(result[1], CouponResponse::class.java)
                 }
-                "LOAD" -> {
+                "LOAD" -> return try {
                     cacheMetrics.incrementCouponDbRead()
                     val response = loader()
-                    redis.opsForValue().set(cacheKey, mapper.writeValueAsString(response), Duration.ofMillis(properties.ttlMs))
+                    val json = mapper.writeValueAsString(response)
+                    redis.opsForValue().set(cacheKey, json, Duration.ofMillis(properties.ttlMs))
+                    redis.opsForValue().set(fallbackKey, json, Duration.ofMillis(properties.ttlMs * FALLBACK_TTL_MULTIPLIER))
+                    response
+                } finally {
                     redis.delete(lockKey)
-                    return response
                 }
-                "WAIT" -> Thread.sleep(WAIT_BACKOFF_MS)
+                "WAIT_MISS" -> Thread.sleep(WAIT_BACKOFF_MS)
             }
         }
         throw IllegalStateException("쿠폰 캐시 채우기 timeout (id=$id)")
@@ -58,5 +61,6 @@ class CouponCacheRepository(
         const val MAX_RETRIES = 50
         const val WAIT_BACKOFF_MS = 20L
         const val LOCK_TTL_MS = 3_000L
+        const val FALLBACK_TTL_MULTIPLIER = 60L
     }
 }
