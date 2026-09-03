@@ -1,3 +1,8 @@
-/gradlew text eol=lf
+# 저장소 전체를 LF 로 고정한다. Windows 에서 core.autocrlf=true 로 clone 해도
+# .sh 가 CRLF 로 체크아웃되지 않아 Git Bash 가 셔뱅을 그대로 읽는다.
+* text=auto eol=lf
+
+# Windows 배치 파일만 CRLF 를 유지한다 (cmd.exe 가 LF 를 제대로 못 읽는다).
 *.bat text eol=crlf
+
 *.jar binary
