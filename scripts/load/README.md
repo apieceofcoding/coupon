@@ -2,7 +2,8 @@
 
 ## 사전 준비
 
-- `brew install k6 jq`
+- macOS: `brew install k6 jq`
+- Windows: Git Bash 에서 실행한다. `winget install jqlang.jq`, `winget install k6 --source winget`
 - `docker compose up -d` 후 서비스가 8080 응답
 
 ### 브랜치 전환 시
