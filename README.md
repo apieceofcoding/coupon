@@ -2,8 +2,23 @@
 
 ## 준비
 
+macOS:
+
 ```bash
 brew install k6 jq
+```
+
+Windows: 셸 스크립트를 실행하므로 **Git Bash** 에서 진행합니다 (PowerShell, cmd 는 지원하지 않습니다).
+
+```bash
+winget install jqlang.jq
+winget install k6 --source winget
+```
+
+`.sh` 실행 시 `bad interpreter` 오류가 나면 예전에 CRLF 로 clone 한 경우입니다. 줄바꿈을 한 번 정규화합니다.
+
+```bash
+git add --renormalize . && git checkout -- .
 ```
 
 Docker를 실행한 뒤 프로젝트 루트에서 진행합니다.
