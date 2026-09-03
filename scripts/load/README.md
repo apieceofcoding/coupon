@@ -24,6 +24,8 @@ scripts/load/
 
 사전 준비: `brew install k6 jq` + `docker compose up -d`.
 
+Windows 는 Git Bash 에서 실행한다. jq, k6 는 `winget install jqlang.jq`, `winget install k6 --source winget` 로 설치한다.
+
 ### 브랜치 전환 시 (이미지 재생성)
 
 브랜치마다 서비스 코드가 다르므로, 전환 후에는 이미지를 새로 굽고 `coupon-service` 컨테이너만 교체한다. mysql/redis/kafka 는 그대로 둔다.
